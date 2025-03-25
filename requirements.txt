@@ -1,0 +1,49 @@
+# Core dependencies
+fastapi==0.104.0
+uvicorn==0.23.2
+pydantic==2.4.2
+python-dotenv==1.0.0
+
+# Database
+sqlalchemy==2.0.22
+alembic==1.12.0
+psycopg2-binary==2.9.9
+asyncpg==0.28.0
+
+# Authentication
+python-jose==3.3.0
+passlib==1.7.4
+python-multipart==0.0.6
+bcrypt==4.0.1
+
+# Storage
+pyminio==7.1.17
+redis==5.0.0
+aioredis==2.0.1
+
+# AI/ML
+openai==1.2.0
+anthropic==0.5.0
+cohere==4.37
+mistralai==0.0.7
+tiktoken==0.5.1
+spacy==3.7.2
+sentencepiece==0.1.99
+PyPDF2==3.0.1
+pdf2image==1.16.3
+
+# Utilities
+python-slugify==8.0.1
+tenacity==8.2.3
+orjson==3.9.9
+Pillow==10.0.1
+numpy==1.26.0
+pandas==2.1.1
+dataclasses-json==0.6.1
+requests==2.31.0
+aiohttp==3.8.6
+
+# Monitoring
+prometheus-client==0.17.1
+logging-gelf==0.0.31
+opencensus==0.11.0
