@@ -18,6 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
+import uuid
 
 from ContractAI.app.db.database import Base
 
@@ -35,7 +36,7 @@ class Document(Base):
     
     __tablename__ = "documents"
     
-    id = Column(String(36), primary_key=True, index=True)
+    id = Column(String(36), primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(255), nullable=False)
     original_filename = Column(String(255), nullable=False)
     file_path = Column(String(512), nullable=False)
@@ -70,19 +71,17 @@ class Document(Base):
 
 
 class DocumentAnalysis(Base):
-    """Document analysis model for storing contract analysis results."""
+    """Document analysis model for storing analysis results."""
     
     __tablename__ = "document_analyses"
     
-    id = Column(String(36), primary_key=True, index=True)
+    id = Column(String(36), primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     document_id = Column(String(36), ForeignKey("documents.id"), nullable=False)
-    clauses = Column(JSON, nullable=True)
-    risks = Column(JSON, nullable=True)
-    recommendations = Column(JSON, nullable=True)
-    summary = Column(JSON, nullable=True)
-    llm_provider = Column(String(50), nullable=True)
-    llm_model = Column(String(100), nullable=True)
-    processing_time_ms = Column(Integer, nullable=True)
+    analysis_type = Column(String(50), nullable=False)
+    status = Column(String(20), nullable=False, default="pending")
+    result = Column(JSON, nullable=True)
+    error = Column(Text, nullable=True)
+    
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
     
@@ -94,13 +93,88 @@ class DocumentAnalysis(Base):
         return {
             "id": self.id,
             "document_id": self.document_id,
-            "clauses": self.clauses,
-            "risks": self.risks,
-            "recommendations": self.recommendations,
-            "summary": self.summary,
-            "llm_provider": self.llm_provider,
-            "llm_model": self.llm_model,
-            "processing_time_ms": self.processing_time_ms,
+            "analysis_type": self.analysis_type,
+            "status": self.status,
+            "result": self.result,
+            "error": self.error,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class Clause(Base):
+    """Clause model for storing extracted contract clauses."""
+    
+    __tablename__ = "clauses"
+    
+    id = Column(String(36), primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    document_id = Column(String(36), ForeignKey("documents.id"), nullable=False)
+    clause_type = Column(String(100), nullable=False)
+    text = Column(Text, nullable=False)
+    start_position = Column(Integer, nullable=True)
+    end_position = Column(Integer, nullable=True)
+    confidence = Column(Integer, nullable=True)  # 0-100 scale
+    metadata = Column(JSON, nullable=True)
+    
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    
+    # Relationships
+    document = relationship("Document")
+    risks = relationship("ClauseRisk", back_populates="clause", cascade="all, delete-orphan")
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert clause to dictionary."""
+        return {
+            "id": self.id,
+            "document_id": self.document_id,
+            "clause_type": self.clause_type,
+            "text": self.text,
+            "start_position": self.start_position,
+            "end_position": self.end_position,
+            "confidence": self.confidence,
+            "metadata": self.metadata,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class RiskLevel(str, enum.Enum):
+    """Risk level enumeration."""
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+    NEGLIGIBLE = "negligible"
+
+
+class ClauseRisk(Base):
+    """Clause risk model for storing identified risks in clauses."""
+    
+    __tablename__ = "clause_risks"
+    
+    id = Column(String(36), primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    clause_id = Column(String(36), ForeignKey("clauses.id"), nullable=False)
+    risk_type = Column(String(100), nullable=False)
+    description = Column(Text, nullable=False)
+    level = Column(SQLAlchemyEnum(RiskLevel), nullable=False)
+    impact = Column(Text, nullable=True)
+    mitigation = Column(Text, nullable=True)
+    metadata = Column(JSON, nullable=True)
+    
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    
+    # Relationships
+    clause = relationship("Clause", back_populates="risks")
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert risk to dictionary."""
+        return {
+            "id": self.id,
+            "clause_id": self.clause_id,
+            "risk_type": self.risk_type,
+            "description": self.description,
+            "level": self.level,
+            "impact": self.impact,
+            "mitigation": self.mitigation,
+            "metadata": self.metadata,
+            "created_at": self.created_at.isoformat() if self.created_at else None
         }
